@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import QuestionSidebar from '@/components/QuestionSidebar';
 import QuestionDisplay from '@/components/QuestionDisplay';
 import CodeEditor from '@/components/CodeEditor';
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/hooks/use-toast";
 
 // Mock data for questions
 const mockQuestions = [
@@ -205,7 +204,8 @@ const Index = () => {
     setQuestions(updatedQuestions);
     
     // Show success toast
-    toast("Solution submitted", {
+    toast({
+      title: "Solution submitted",
       description: "Your solution has been submitted successfully",
       duration: 3000
     });
