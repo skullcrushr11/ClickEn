@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,18 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				assessment: {
+					bg: '#f8f9fa',
+					sidebar: '#f0f2f5',
+					panel: '#ffffff',
+					primary: '#0070f3',
+					secondary: '#4b5563',
+					accent: '#0284c7',
+					border: '#e5e7eb',
+					success: '#22c55e',
+					error: '#ef4444',
+					warning: '#f59e0b'
 				}
 			},
 			borderRadius: {
@@ -84,11 +97,55 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					'0%': { opacity: '0' },
+					'100%': { opacity: '1' }
+				},
+				'fade-out': {
+					'0%': { opacity: '1' },
+					'100%': { opacity: '0' }
+				},
+				'slide-up': {
+					'0%': { transform: 'translateY(10px)', opacity: '0' },
+					'100%': { transform: 'translateY(0)', opacity: '1' }
+				},
+				'slide-down': {
+					'0%': { transform: 'translateY(-10px)', opacity: '0' },
+					'100%': { transform: 'translateY(0)', opacity: '1' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.3s ease-out',
+				'fade-out': 'fade-out 0.3s ease-out',
+				'slide-up': 'slide-up 0.3s ease-out',
+				'slide-down': 'slide-down 0.3s ease-out'
+			},
+			fontFamily: {
+				sans: [
+					'"SF Pro Display"',
+					'"SF Pro Text"',
+					'system-ui',
+					'-apple-system',
+					'BlinkMacSystemFont',
+					'sans-serif'
+				],
+				mono: [
+					'"SF Mono"',
+					'SFMono-Regular',
+					'ui-monospace',
+					'Menlo',
+					'Monaco',
+					'Consolas',
+					'Liberation Mono',
+					'Courier New',
+					'monospace'
+				]
+			},
+			gridTemplateColumns: {
+				'assessment': 'auto 1fr 1fr'
 			}
 		}
 	},
