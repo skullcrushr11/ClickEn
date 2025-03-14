@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import QuestionSidebar from '@/components/QuestionSidebar';
 import QuestionDisplay from '@/components/QuestionDisplay';
@@ -212,7 +213,7 @@ const Index = () => {
   };
   
   return (
-    <div className="assessment-container">
+    <div className={`flex flex-row h-screen overflow-hidden transition-all duration-300 ease-in-out`}>
       <QuestionSidebar
         questions={questions}
         currentQuestionId={currentQuestionId}
@@ -221,19 +222,25 @@ const Index = () => {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       
-      <QuestionDisplay
-        question={currentQuestion}
-        onPrevQuestion={handlePrevQuestion}
-        onNextQuestion={handleNextQuestion}
-        hasPrevQuestion={questions.findIndex(q => q.id === currentQuestionId) > 0}
-        hasNextQuestion={questions.findIndex(q => q.id === currentQuestionId) < questions.length - 1}
-      />
-      
-      <CodeEditor
-        questionId={currentQuestionId}
-        initialCode={getLanguageStarterCode('javascript')}
-        onSubmit={handleSubmitCode}
-      />
+      <div className={`flex-1 flex ${sidebarCollapsed ? 'pl-[60px]' : 'pl-[280px]'} absolute inset-y-0 left-0 right-0 transition-all duration-300 ease-in-out`}>
+        <div className="w-1/2 border-r border-assessment-border overflow-y-auto">
+          <QuestionDisplay
+            question={currentQuestion}
+            onPrevQuestion={handlePrevQuestion}
+            onNextQuestion={handleNextQuestion}
+            hasPrevQuestion={questions.findIndex(q => q.id === currentQuestionId) > 0}
+            hasNextQuestion={questions.findIndex(q => q.id === currentQuestionId) < questions.length - 1}
+          />
+        </div>
+        
+        <div className="w-1/2 overflow-hidden">
+          <CodeEditor
+            questionId={currentQuestionId}
+            initialCode={getLanguageStarterCode('javascript')}
+            onSubmit={handleSubmitCode}
+          />
+        </div>
+      </div>
     </div>
   );
 };

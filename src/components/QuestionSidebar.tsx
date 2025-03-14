@@ -43,7 +43,7 @@ const QuestionSidebar: React.FC<QuestionSidebarProps> = ({
   return (
     <div 
       className={cn(
-        "h-full bg-assessment-sidebar border-r border-assessment-border transition-all duration-300 ease-in-out flex flex-col",
+        "fixed top-0 left-0 h-full bg-assessment-sidebar border-r border-assessment-border transition-all duration-300 ease-in-out z-10 flex flex-col",
         collapsed ? "w-[60px]" : "w-[280px]"
       )}
     >
