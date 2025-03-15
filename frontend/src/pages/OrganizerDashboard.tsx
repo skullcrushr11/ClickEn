@@ -12,12 +12,12 @@ import { CheckCircle, Plus, Users, AlertTriangle, Clock } from 'lucide-react';
 const OrganizerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
-  
+
   // Mock data - in a real app this would come from an API
   const testSessions = [
-    { 
-      id: 'T001', 
-      title: 'Algorithm Assessment', 
+    {
+      id: 'T001',
+      title: 'Algorithm Assessment',
       status: 'active',
       startDate: '2023-07-10',
       endDate: '2023-07-15',
@@ -25,9 +25,9 @@ const OrganizerDashboard: React.FC = () => {
       completedCandidates: 12,
       flaggedCandidates: 3
     },
-    { 
-      id: 'T002', 
-      title: 'Data Structures Quiz', 
+    {
+      id: 'T002',
+      title: 'Data Structures Quiz',
       status: 'active',
       startDate: '2023-07-15',
       endDate: '2023-07-20',
@@ -35,9 +35,9 @@ const OrganizerDashboard: React.FC = () => {
       completedCandidates: 0,
       flaggedCandidates: 0
     },
-    { 
-      id: 'T003', 
-      title: 'Web Development Test', 
+    {
+      id: 'T003',
+      title: 'Web Development Test',
       status: 'completed',
       startDate: '2023-06-20',
       endDate: '2023-06-25',
@@ -46,32 +46,32 @@ const OrganizerDashboard: React.FC = () => {
       flaggedCandidates: 5
     }
   ];
-  
+
   const handleLogout = () => {
     localStorage.removeItem('userType');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('isAuthenticated');
     navigate('/');
   };
-  
+
   const handleAddQuestion = (data: any) => {
     console.log('New question data:', data);
     setActiveTab('overview');
     // In a real app, this would save the data to a database
   };
-  
+
   const handleCreateSession = (data: any) => {
     console.log('New test session data:', data);
     setActiveTab('overview');
     // In a real app, this would save the data to a database
   };
-  
+
   return (
     <div className="min-h-screen bg-assessment-panel">
       <header className="bg-white border-b py-4 px-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">AssessQuest Admin</h1>
-          
+          <h1 className="text-2xl font-bold">ClickEn Admin</h1>
+
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">admin@example.com</span>
             <Button variant="outline" size="sm" onClick={handleLogout}>
@@ -80,11 +80,11 @@ const OrganizerDashboard: React.FC = () => {
           </div>
         </div>
       </header>
-      
+
       <main className="max-w-7xl mx-auto py-8 px-6">
-        <Tabs 
-          defaultValue="overview" 
-          value={activeTab} 
+        <Tabs
+          defaultValue="overview"
+          value={activeTab}
           onValueChange={setActiveTab}
           className="w-full"
         >
@@ -96,7 +96,7 @@ const OrganizerDashboard: React.FC = () => {
               <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
             </TabsList>
           </div>
-          
+
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card>
@@ -113,7 +113,7 @@ const OrganizerDashboard: React.FC = () => {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -130,7 +130,7 @@ const OrganizerDashboard: React.FC = () => {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -148,7 +148,7 @@ const OrganizerDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Test Sessions</CardTitle>
@@ -159,7 +159,7 @@ const OrganizerDashboard: React.FC = () => {
               <CardContent>
                 <div className="space-y-4">
                   {testSessions.map(session => (
-                    <div 
+                    <div
                       key={session.id}
                       className="flex items-center justify-between p-4 border rounded-lg"
                     >
@@ -180,7 +180,7 @@ const OrganizerDashboard: React.FC = () => {
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         {session.status === 'active' ? (
                           <Button variant="outline" size="sm">
@@ -197,7 +197,7 @@ const OrganizerDashboard: React.FC = () => {
                 </div>
               </CardContent>
               <CardFooter className="border-t px-6 py-4">
-                <Button 
+                <Button
                   className="w-full"
                   onClick={() => setActiveTab('test-session')}
                 >
@@ -207,15 +207,15 @@ const OrganizerDashboard: React.FC = () => {
               </CardFooter>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="add-question">
             <QuestionForm onSubmit={handleAddQuestion} />
           </TabsContent>
-          
+
           <TabsContent value="test-session">
             <TestSessionConfig onSubmit={handleCreateSession} />
           </TabsContent>
-          
+
           <TabsContent value="monitoring">
             <CheatDetectionPanel />
           </TabsContent>

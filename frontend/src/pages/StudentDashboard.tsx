@@ -11,7 +11,7 @@ const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [upcomingTests, setUpcomingTests] = useState<any[]>([]);
-  
+
   // Mock data for tests
   useEffect(() => {
     // In a real app, this would fetch from an API
@@ -36,7 +36,7 @@ const StudentDashboard: React.FC = () => {
       }
     ]);
   }, []);
-  
+
   const handleStartTest = (testId: string) => {
     // In a real app, this would initialize a test session
     toast({
@@ -45,20 +45,20 @@ const StudentDashboard: React.FC = () => {
     });
     navigate(`/test/${testId}`);
   };
-  
+
   const handleLogout = () => {
     localStorage.removeItem('userType');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('isAuthenticated');
     navigate('/');
   };
-  
+
   return (
     <div className="min-h-screen bg-assessment-panel">
       <header className="bg-white border-b py-4 px-6">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">AssessQuest</h1>
-          
+          <h1 className="text-2xl font-bold">ClickEn</h1>
+
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">student@example.com</span>
             <Button variant="outline" size="sm" onClick={handleLogout}>
@@ -67,10 +67,10 @@ const StudentDashboard: React.FC = () => {
           </div>
         </div>
       </header>
-      
+
       <main className="max-w-5xl mx-auto py-8 px-6">
-        <h2 className="text-2xl font-bold mb-6">Welcome to AssessQuest</h2>
-        
+        <h2 className="text-2xl font-bold mb-6">Welcome to ClickEn</h2>
+
         <div className="grid gap-6">
           <Card>
             <CardHeader>
@@ -83,7 +83,7 @@ const StudentDashboard: React.FC = () => {
               {upcomingTests.length > 0 ? (
                 <div className="space-y-4">
                   {upcomingTests.map(test => (
-                    <div 
+                    <div
                       key={test.id}
                       className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg"
                     >
@@ -102,9 +102,9 @@ const StudentDashboard: React.FC = () => {
                           <span className="text-muted-foreground">Date: {test.date}</span>
                         </div>
                       </div>
-                      
+
                       <div className="mt-4 sm:mt-0 flex flex-col sm:items-end gap-2">
-                        <Button 
+                        <Button
                           className="flex items-center"
                           onClick={() => handleStartTest(test.id)}
                         >
@@ -122,7 +122,7 @@ const StudentDashboard: React.FC = () => {
               )}
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="bg-yellow-50 border-b">
               <div className="flex items-start gap-2">
