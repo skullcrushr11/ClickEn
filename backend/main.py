@@ -1,8 +1,10 @@
 from flask import Flask, jsonify
 from db.db import connect_to_mongo
+from flask_cors import CORS
 import json
 
 app = Flask(__name__)
+CORS(app)
 
 with app.app_context():
     str_res = connect_to_mongo()
