@@ -4,12 +4,6 @@ import mongoose, { Types } from 'mongoose';
 // MongoDB connection string - to be filled in by the user
 const MONGODB_URI = import.meta.env.VITE_MONGODB_URI || '';
 
-// Connection options
-const options = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-} as mongoose.ConnectOptions;
-
 let isConnected = false;
 
 export const connectToDatabase = async (): Promise<boolean> => {
@@ -24,7 +18,7 @@ export const connectToDatabase = async (): Promise<boolean> => {
   }
 
   try {
-    await mongoose.connect(MONGODB_URI, options);
+    await mongoose.connect(MONGODB_URI);
     isConnected = true;
     console.log('Connected to MongoDB');
     return true;
@@ -46,16 +40,7 @@ export const disconnectFromDatabase = async () => {
     console.log('Disconnected from MongoDB');
   } catch (error) {
     console.error('Error disconnecting from MongoDB:', error);
-    throw error;
   }
-};
-
-export const getMongoConnection = () => {
-  return mongoose.connection;
-};
-
-export const isMongoConnected = () => {
-  return isConnected;
 };
 
 // Helper function to convert string IDs to ObjectIds
