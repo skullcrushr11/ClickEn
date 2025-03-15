@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import sys
 import json
@@ -32,15 +31,18 @@ def parse_arguments():
                       help='Output directory for results')
     parser.add_argument('--verbose', action='store_true',
                       help='Display detailed output')
+    parser.add_argument('--max-samples', type=int, default=5000,
+                      help='Maximum number of samples to use from each dataset (default: 5000)')
     return parser.parse_args()
 
-def train_model(sincere_path, cheating_path, verbose=False):
+def train_model(sincere_path, cheating_path, max_samples=5000, verbose=False):
     """
     Train a model on the provided datasets
     
     Args:
         sincere_path: Path to sincere data
         cheating_path: Path to cheating data
+        max_samples: Maximum number of samples to use from each dataset
         verbose: Whether to display detailed output
         
     Returns:
@@ -48,13 +50,21 @@ def train_model(sincere_path, cheating_path, verbose=False):
     """
     if verbose:
         print(f"Training model with data from {sincere_path} and {cheating_path}...")
+        print(f"Using maximum {max_samples} samples from each dataset")
     
     # Create a pretrained system
     system = ProctoringSystem(pretrained=True)
     
-    # Train the model - use a larger sample size for better accuracy
-    sample_size = 5000  # Increased from default
-    success = system.pretrain_with_datasets(sincere_path, cheating_path, sample_size=sample_size)
+    # Add progress information
+    print("Starting model training...")
+    print("This may take a while for large datasets...")
+    
+    # Train the model
+    start_time = datetime.now()
+    success = system.pretrain_with_datasets(sincere_path, cheating_path, sample_size=max_samples)
+    elapsed_time = (datetime.now() - start_time).total_seconds()
+    
+    print(f"Training completed in {elapsed_time:.1f} seconds")
     
     if not success:
         print("WARNING: Model training was not successful")
@@ -277,7 +287,8 @@ def main():
     
     # Train the model
     start_time = datetime.now()
-    system = train_model(args.sincere_train, args.cheating_train, args.verbose)
+    system = train_model(args.sincere_train, args.cheating_train, 
+                         max_samples=args.max_samples, verbose=args.verbose)
     training_time = (datetime.now() - start_time).total_seconds()
     
     # Evaluate the model

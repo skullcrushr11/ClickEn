@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -11,7 +12,8 @@ import warnings
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import os
-import random
+import signal
+import sys
 warnings.filterwarnings('ignore')
 
 # Define the states for the proctoring system
@@ -21,6 +23,14 @@ STATES = {
     2: "Maybe Cheating",
     3: "Definitely Cheating"
 }
+
+def setup_interrupt_handler():
+    """Set up a signal handler for graceful shutdown on Ctrl+C"""
+    def signal_handler(sig, frame):
+        print("\nKeyboard interrupt detected. Shutting down gracefully...")
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
 
 class KeystrokeProcessor:
     """
@@ -539,6 +549,20 @@ class ProctoringHMM:
             return 0, 0.0
 
 
+# Add these imports at the top of the file
+import signal
+import sys
+
+# Add this function near the beginning of the file
+def setup_interrupt_handler():
+    """Set up a signal handler for graceful shutdown on Ctrl+C"""
+    def signal_handler(sig, frame):
+        print("\nKeyboard interrupt detected. Shutting down gracefully...")
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+
+# Modify the ProctoringSystem class to initialize with interrupt handling
 class ProctoringSystem:
     """
     Main proctoring system that integrates keystroke processing and HMM classification
@@ -562,6 +586,9 @@ class ProctoringSystem:
         self.last_features_hash = None
         self.last_state = 0
         self.last_risk_score = 0.0
+        
+        # Set up interrupt handler
+        setup_interrupt_handler()
         
     def set_user_id(self, user_id):
         """
@@ -701,7 +728,7 @@ class ProctoringSystem:
         
         return features
         
-    def pretrain_with_datasets(self, sincere_path, cheating_path, sample_size=2000):
+    def pretrain_with_datasets(self, sincere_path, cheating_path, sample_size=2000, max_iter=100):
         """
         Pretrain the HMM model with labeled datasets
         
@@ -709,11 +736,16 @@ class ProctoringSystem:
             sincere_path: Path to sincere (not cheating) data
             cheating_path: Path to cheating data
             sample_size: Number of samples to use from each dataset (default: 2000)
+            max_iter: Maximum number of EM iterations (default: 100)
             
         Returns:
             True if pretraining was successful, False otherwise
         """
         print(f"Pretraining HMM model with datasets: {sincere_path} and {cheating_path}")
+        
+        # Load sincere data with a reduced sample size to speed up convergence
+        sample_size = min(sample_size, 1000)  # Limit to 1000 samples max for faster training
+        print(f"Using at most {sample_size} samples per class to improve convergence")
         
         # Load sincere data
         sincere_data = load_keystroke_data(sincere_path)
@@ -726,8 +758,6 @@ class ProctoringSystem:
         # Load cheating data
         cheating_data = load_keystroke_data(cheating_path)
         if len(cheating_data) > sample_size:
-            import random
-            random.seed(42)  # For reproducibility
             cheating_data = random.sample(cheating_data, sample_size)
             print(f"Randomly sampled {sample_size} events from cheating data")
         

@@ -40,8 +40,8 @@ def split_data_by_events(data, test_split):
         if "keyboard_data" in data[user_id]:
             # Shuffle the keyboard data for this user
             keyboard_events = data[user_id]["keyboard_data"].copy()
-            random.shuffle(keyboard_events)
-            
+            # random.shuffle(keyboard_events)
+            sorted(keyboard_events, key = lambda x: x[2])
             # Calculate split point
             split_idx = int(len(keyboard_events) * (1 - test_split))
             
