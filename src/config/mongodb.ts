@@ -12,15 +12,14 @@ const options = {
 
 let isConnected = false;
 
-export const connectToDatabase = async () => {
+export const connectToDatabase = async (): Promise<boolean> => {
   if (isConnected) {
     console.log('Using existing MongoDB connection');
     return true;
   }
 
   if (!MONGODB_URI) {
-    console.error('MongoDB URI is not defined. Please set the VITE_MONGODB_URI environment variable.');
-    console.log('Using mock data instead');
+    console.log('MongoDB URI is not defined. Using mock data instead.');
     return false;
   }
 
