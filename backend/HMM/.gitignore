@@ -1,0 +1,28 @@
+# Virtual environment
+.venv/
+env/
+venv/
+sandbox/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data files
+*.json
+
+*.csv
+evaluation_results/
+cross_val_results/
+*.png
+
+# Local development
+sandbox/
+data_combiner.py
+.idea/
+.vscode/
+
+# Logs
+logs/
+*.log
