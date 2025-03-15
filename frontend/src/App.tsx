@@ -15,11 +15,11 @@ import TestSession from "./pages/TestSession";
 const PrivateRoute = ({ children, userType }: { children: React.ReactNode, userType: string }) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   const storedUserType = localStorage.getItem('userType');
-  
+
   if (!isAuthenticated || (userType && storedUserType !== userType)) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -34,25 +34,25 @@ const App = () => (
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/assessment-demo" element={<Index />} />
-          
+
           <Route path="/student-dashboard" element={
             <PrivateRoute userType="student">
               <StudentDashboard />
             </PrivateRoute>
           } />
-          
+
           <Route path="/organizer-dashboard" element={
             <PrivateRoute userType="organizer">
               <OrganizerDashboard />
             </PrivateRoute>
           } />
-          
+
           <Route path="/test/:testId" element={
             <PrivateRoute userType="student">
               <TestSession />
             </PrivateRoute>
           } />
-          
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

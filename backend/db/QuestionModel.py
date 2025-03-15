@@ -2,10 +2,10 @@ import json
 from datetime import datetime
 from typing import Dict, Any
 from bson import ObjectId
-from db import DB
+from pymongo.collection import Collection
 
 class QuestionModel:
-    def __init__(self):
+    def __init__(self, DB: Collection):
         self.db = DB
         self.collection = DB["questions"]
 
