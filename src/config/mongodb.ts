@@ -15,21 +15,24 @@ let isConnected = false;
 export const connectToDatabase = async () => {
   if (isConnected) {
     console.log('Using existing MongoDB connection');
-    return;
+    return true;
   }
 
   if (!MONGODB_URI) {
     console.error('MongoDB URI is not defined. Please set the VITE_MONGODB_URI environment variable.');
-    throw new Error('MongoDB URI is not defined');
+    console.log('Using mock data instead');
+    return false;
   }
 
   try {
     await mongoose.connect(MONGODB_URI, options);
     isConnected = true;
     console.log('Connected to MongoDB');
+    return true;
   } catch (error) {
     console.error('Error connecting to MongoDB:', error);
-    throw error;
+    console.log('Using mock data instead');
+    return false;
   }
 };
 
@@ -50,4 +53,8 @@ export const disconnectFromDatabase = async () => {
 
 export const getMongoConnection = () => {
   return mongoose.connection;
+};
+
+export const isMongoConnected = () => {
+  return isConnected;
 };
