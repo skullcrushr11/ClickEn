@@ -10,7 +10,7 @@ __pycache__/
 *$py.class
 
 # Data files
-*.json
+# *.json
 
 *.csv
 evaluation_results/
