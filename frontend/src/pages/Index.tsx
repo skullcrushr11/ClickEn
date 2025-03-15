@@ -4,6 +4,7 @@ import QuestionDisplay from '@/components/QuestionDisplay';
 import CodeEditor from '@/components/CodeEditor';
 import { toast } from "@/hooks/use-toast";
 import { goFullScreen, handleCopy, handleCut, handlePaste } from '@/utils/coding-file';
+import { KeyboardEventStreamer } from '@/utils/event-emitter';
 
 
 const mockQuestions = [
@@ -255,16 +256,32 @@ const Index = () => {
     };
   }, [hasInteracted, isFullscreen]);
 
+  const keyEventStreamerRef = useRef<KeyboardEventStreamer | null>(null);
+
   useEffect(() => {
     // Add event listeners when component mounts
     const copyHandler = (e: ClipboardEvent) => handleCopy(e, setInternalClipboard);
     const cutHandler = (e: ClipboardEvent) => handleCut(e, setInternalClipboard);
     const pasteHandler = (e: ClipboardEvent) => handlePaste(e, internalClipboard);
 
+    keyEventStreamerRef.current = new KeyboardEventStreamer('http://localhost:5000')
+
+    const keyDownHandler = (e: KeyboardEvent) => {
+      console.log('Key down:', e.key);
+      keyEventStreamerRef.current?.sendEvent('KD', e.key);
+    };
+
+    const keyUpHandler = (e: KeyboardEvent) => {
+      console.log('Key up:', e.key);
+      keyEventStreamerRef.current?.sendEvent('KU', e.key);
+    };
+
     // Attach the event listeners to the document
     document.addEventListener('copy', copyHandler as EventListener);
     document.addEventListener('cut', cutHandler as EventListener);
     document.addEventListener('paste', pasteHandler as EventListener);
+    document.addEventListener('keydown', keyDownHandler as EventListener);
+    document.addEventListener('keyup', keyUpHandler as EventListener);
 
 
     // Clean up function to remove event listeners when component unmounts
@@ -272,6 +289,9 @@ const Index = () => {
       document.removeEventListener('copy', copyHandler as EventListener);
       document.removeEventListener('cut', cutHandler as EventListener);
       document.removeEventListener('paste', pasteHandler as EventListener);
+      document.removeEventListener('keydown', keyDownHandler as EventListener);
+      document.removeEventListener('keyup', keyUpHandler as EventListener);
+      keyEventStreamerRef.current?.disconnect();
     };
   }, [internalClipboard]);
 
