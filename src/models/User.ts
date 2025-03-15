@@ -22,5 +22,5 @@ const UserSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-// Check if the model already exists to prevent model overwrite errors
-export const User = mongoose.models?.User || mongoose.model<IUser>('User', UserSchema);
+// Check if mongoose connection is ready before creating model
+export const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

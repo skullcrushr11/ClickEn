@@ -1,5 +1,5 @@
 
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 
 // MongoDB connection string - to be filled in by the user
 const MONGODB_URI = import.meta.env.VITE_MONGODB_URI || '';
@@ -56,4 +56,14 @@ export const getMongoConnection = () => {
 
 export const isMongoConnected = () => {
   return isConnected;
+};
+
+// Helper function to convert string IDs to ObjectIds
+export const toObjectId = (id: string): Types.ObjectId => {
+  return new Types.ObjectId(id);
+};
+
+// Helper to stringify ObjectIds
+export const toStringId = (id: Types.ObjectId | string): string => {
+  return id.toString();
 };

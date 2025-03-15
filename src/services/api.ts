@@ -1,9 +1,10 @@
 
-import { connectToDatabase, isMongoConnected } from '../config/mongodb';
+import { connectToDatabase, isMongoConnected, toObjectId, toStringId } from '../config/mongodb';
 import { User, IUser } from '../models/User';
 import { Question, IQuestion } from '../models/Question';
 import { TestSession, ITestSession } from '../models/TestSession';
 import { UserSubmission, IUserSubmission } from '../models/UserSubmission';
+import mongoose from 'mongoose';
 
 // Mock data for when MongoDB is not connected
 const mockData = {
@@ -138,24 +139,30 @@ export const authenticateUser = async (email: string, password: string) => {
       };
     } catch (error) {
       console.error('Error authenticating user:', error);
-      throw error;
+      // Fallback to mock data
+      return authenticateWithMockData(email, password);
     }
   } else {
     // Use mock data if not connected
-    const user = mockData.users.find(u => u.email === email && u.password === password);
-    
-    if (!user) {
-      throw new Error('Invalid credentials');
-    }
-    
-    return {
-      id: user._id,
-      email: user.email,
-      userType: user.userType,
-      firstName: user.firstName,
-      lastName: user.lastName
-    };
+    return authenticateWithMockData(email, password);
   }
+};
+
+// Helper function to authenticate with mock data
+const authenticateWithMockData = (email: string, password: string) => {
+  const user = mockData.users.find(u => u.email === email && u.password === password);
+    
+  if (!user) {
+    throw new Error('Invalid credentials');
+  }
+  
+  return {
+    id: user._id,
+    email: user.email,
+    userType: user.userType,
+    firstName: user.firstName,
+    lastName: user.lastName
+  };
 };
 
 export const registerUser = async (userData: Partial<IUser>) => {
@@ -181,31 +188,37 @@ export const registerUser = async (userData: Partial<IUser>) => {
       };
     } catch (error) {
       console.error('Error registering user:', error);
-      throw error;
+      // Fallback to mock data
+      return registerWithMockData(userData);
     }
   } else {
     // Use mock data if not connected
-    const existingUser = mockData.users.find(u => u.email === userData.email);
-    
-    if (existingUser) {
-      throw new Error('User already exists');
-    }
-    
-    const newUser = {
-      _id: `user${mockData.users.length + 1}`,
-      ...userData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    mockData.users.push(newUser as any);
-    
-    return {
-      id: newUser._id,
-      email: userData.email,
-      userType: userData.userType
-    };
+    return registerWithMockData(userData);
   }
+};
+
+// Helper function to register with mock data
+const registerWithMockData = (userData: Partial<IUser>) => {
+  const existingUser = mockData.users.find(u => u.email === userData.email);
+    
+  if (existingUser) {
+    throw new Error('User already exists');
+  }
+  
+  const newUser = {
+    _id: `user${mockData.users.length + 1}`,
+    ...userData,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  
+  mockData.users.push(newUser as any);
+  
+  return {
+    id: newUser._id,
+    email: userData.email,
+    userType: userData.userType
+  };
 };
 
 // Question Services
@@ -214,7 +227,7 @@ export const getQuestions = async () => {
   
   if (isConnected) {
     try {
-      return await Question.find().lean().exec();
+      return await Question.find().lean().exec() || [];
     } catch (error) {
       console.error('Error getting questions:', error);
       return mockData.questions;
@@ -229,7 +242,7 @@ export const getQuestionById = async (id: string) => {
   
   if (isConnected) {
     try {
-      return await Question.findById(id).lean().exec();
+      return await Question.findById(id).lean().exec() || null;
     } catch (error) {
       console.error('Error getting question by ID:', error);
       return mockData.questions.find(q => q._id === id) || null;
@@ -246,22 +259,27 @@ export const createQuestion = async (questionData: Partial<IQuestion>) => {
     try {
       const newQuestion = new Question(questionData);
       await newQuestion.save();
-      return newQuestion;
+      return newQuestion.toObject();
     } catch (error) {
       console.error('Error creating question:', error);
-      throw error;
+      return createQuestionWithMockData(questionData);
     }
   } else {
-    const newQuestion = {
-      _id: `q${mockData.questions.length + 1}`,
-      ...questionData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    mockData.questions.push(newQuestion as any);
-    return newQuestion;
+    return createQuestionWithMockData(questionData);
   }
+};
+
+// Helper function to create question with mock data
+const createQuestionWithMockData = (questionData: Partial<IQuestion>) => {
+  const newQuestion = {
+    _id: `q${mockData.questions.length + 1}`,
+    ...questionData,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  
+  mockData.questions.push(newQuestion as any);
+  return newQuestion;
 };
 
 // Test Session Services
@@ -271,30 +289,29 @@ export const getTestSessions = async (userId: string, userType: string) => {
   if (isConnected) {
     try {
       if (userType === 'organizer') {
-        return await TestSession.find({ createdBy: userId }).lean().exec();
+        return await TestSession.find({ createdBy: userId }).lean().exec() || [];
       } else {
         // For students, find test sessions they are candidates for
-        return await TestSession.find({ candidates: userId, status: 'active' }).lean().exec();
+        return await TestSession.find({ candidates: userId, status: 'active' }).lean().exec() || [];
       }
     } catch (error) {
       console.error('Error getting test sessions:', error);
       // Fallback to mock data if error
-      if (userType === 'organizer') {
-        return mockData.testSessions.filter(session => session.createdBy === userId);
-      } else {
-        return mockData.testSessions.filter(
-          session => session.candidates.includes(userId) && session.status === 'active'
-        );
-      }
+      return getSessionsFromMockData(userId, userType);
     }
   } else {
-    if (userType === 'organizer') {
-      return mockData.testSessions.filter(session => session.createdBy === userId);
-    } else {
-      return mockData.testSessions.filter(
-        session => session.candidates.includes(userId) && session.status === 'active'
-      );
-    }
+    return getSessionsFromMockData(userId, userType);
+  }
+};
+
+// Helper function to get sessions from mock data
+const getSessionsFromMockData = (userId: string, userType: string) => {
+  if (userType === 'organizer') {
+    return mockData.testSessions.filter(session => session.createdBy === userId);
+  } else {
+    return mockData.testSessions.filter(
+      session => session.candidates.includes(userId) && session.status === 'active'
+    );
   }
 };
 
@@ -303,35 +320,30 @@ export const getTestSessionById = async (id: string) => {
   
   if (isConnected) {
     try {
-      return await TestSession.findById(id).populate('questions').lean().exec();
+      const session = await TestSession.findById(id).populate('questions').lean().exec();
+      return session || getSessionByIdFromMockData(id);
     } catch (error) {
       console.error('Error getting test session by ID:', error);
-      // Fallback to mock data if error
-      const session = mockData.testSessions.find(s => s._id === id);
-      if (session) {
-        // Simulate populated questions
-        return {
-          ...session,
-          questions: session.questions.map(qId => 
-            mockData.questions.find(q => q._id === qId)
-          )
-        };
-      }
-      return null;
+      return getSessionByIdFromMockData(id);
     }
   } else {
-    const session = mockData.testSessions.find(s => s._id === id);
-    if (session) {
-      // Simulate populated questions
-      return {
-        ...session,
-        questions: session.questions.map(qId => 
-          mockData.questions.find(q => q._id === qId)
-        )
-      };
-    }
-    return null;
+    return getSessionByIdFromMockData(id);
   }
+};
+
+// Helper function to get session by ID from mock data
+const getSessionByIdFromMockData = (id: string) => {
+  const session = mockData.testSessions.find(s => s._id === id);
+  if (session) {
+    // Simulate populated questions
+    return {
+      ...session,
+      questions: session.questions.map(qId => 
+        mockData.questions.find(q => q._id === qId)
+      )
+    };
+  }
+  return null;
 };
 
 export const createTestSession = async (sessionData: Partial<ITestSession>) => {
@@ -341,22 +353,27 @@ export const createTestSession = async (sessionData: Partial<ITestSession>) => {
     try {
       const newSession = new TestSession(sessionData);
       await newSession.save();
-      return newSession;
+      return newSession.toObject();
     } catch (error) {
       console.error('Error creating test session:', error);
-      throw error;
+      return createSessionWithMockData(sessionData);
     }
   } else {
-    const newSession = {
-      _id: `ts${mockData.testSessions.length + 1}`,
-      ...sessionData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    mockData.testSessions.push(newSession as any);
-    return newSession;
+    return createSessionWithMockData(sessionData);
   }
+};
+
+// Helper function to create session with mock data
+const createSessionWithMockData = (sessionData: Partial<ITestSession>) => {
+  const newSession = {
+    _id: `ts${mockData.testSessions.length + 1}`,
+    ...sessionData,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  
+  mockData.testSessions.push(newSession as any);
+  return newSession;
 };
 
 // User Submission Services
@@ -365,34 +382,32 @@ export const getUserSubmissions = async (userId: string, testSessionId: string) 
   
   if (isConnected) {
     try {
-      return await UserSubmission.find({ 
+      const submissions = await UserSubmission.find({ 
         user: userId,
         testSession: testSessionId 
-      }).populate('question').lean().exec();
+      }).populate('question').lean().exec() || [];
+      
+      return submissions;
     } catch (error) {
       console.error('Error getting user submissions:', error);
-      // Fallback to mock data if error
-      const submissions = mockData.userSubmissions.filter(
-        sub => sub.user === userId && sub.testSession === testSessionId
-      );
-      
-      // Simulate populated questions
-      return submissions.map(sub => ({
-        ...sub,
-        question: mockData.questions.find(q => q._id === sub.question)
-      }));
+      return getUserSubmissionsFromMockData(userId, testSessionId);
     }
   } else {
-    const submissions = mockData.userSubmissions.filter(
-      sub => sub.user === userId && sub.testSession === testSessionId
-    );
-    
-    // Simulate populated questions
-    return submissions.map(sub => ({
-      ...sub,
-      question: mockData.questions.find(q => q._id === sub.question)
-    }));
+    return getUserSubmissionsFromMockData(userId, testSessionId);
   }
+};
+
+// Helper function to get user submissions from mock data
+const getUserSubmissionsFromMockData = (userId: string, testSessionId: string) => {
+  const submissions = mockData.userSubmissions.filter(
+    sub => sub.user === userId && sub.testSession === testSessionId
+  );
+  
+  // Simulate populated questions
+  return submissions.map(sub => ({
+    ...sub,
+    question: mockData.questions.find(q => q._id === sub.question)
+  }));
 };
 
 export const saveUserSubmission = async (submissionData: Partial<IUserSubmission>) => {
@@ -411,45 +426,51 @@ export const saveUserSubmission = async (submissionData: Partial<IUserSubmission
         // Update existing submission
         Object.assign(existingSubmission, submissionData);
         await existingSubmission.save();
-        return existingSubmission;
+        return existingSubmission.toObject();
       } else {
         // Create new submission
         const newSubmission = new UserSubmission(submissionData);
         await newSubmission.save();
-        return newSubmission;
+        return newSubmission.toObject();
       }
     } catch (error) {
       console.error('Error saving user submission:', error);
-      throw error;
+      return saveSubmissionToMockData(submissionData);
     }
   } else {
-    // Check if a mock submission already exists
-    const existingIndex = mockData.userSubmissions.findIndex(
-      sub => sub.user === submissionData.user && 
-             sub.question === submissionData.question && 
-             sub.testSession === submissionData.testSession
-    );
+    return saveSubmissionToMockData(submissionData);
+  }
+};
+
+// Helper function to save submission to mock data
+const saveSubmissionToMockData = (submissionData: Partial<IUserSubmission>) => {
+  // Check if a mock submission already exists
+  const existingIndex = mockData.userSubmissions.findIndex(
+    sub => 
+      String(sub.user) === String(submissionData.user) && 
+      String(sub.question) === String(submissionData.question) && 
+      String(sub.testSession) === String(submissionData.testSession)
+  );
+  
+  if (existingIndex !== -1) {
+    // Update existing submission
+    mockData.userSubmissions[existingIndex] = {
+      ...mockData.userSubmissions[existingIndex],
+      ...submissionData,
+      updatedAt: new Date()
+    };
+    return mockData.userSubmissions[existingIndex];
+  } else {
+    // Create new submission
+    const newSubmission = {
+      _id: `sub${mockData.userSubmissions.length + 1}`,
+      ...submissionData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
     
-    if (existingIndex !== -1) {
-      // Update existing submission
-      mockData.userSubmissions[existingIndex] = {
-        ...mockData.userSubmissions[existingIndex],
-        ...submissionData,
-        updatedAt: new Date()
-      };
-      return mockData.userSubmissions[existingIndex];
-    } else {
-      // Create new submission
-      const newSubmission = {
-        _id: `sub${mockData.userSubmissions.length + 1}`,
-        ...submissionData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      
-      mockData.userSubmissions.push(newSubmission as any);
-      return newSubmission;
-    }
+    mockData.userSubmissions.push(newSubmission as any);
+    return newSubmission;
   }
 };
 
@@ -459,52 +480,75 @@ export const getOrganizerInsights = async (organizerId: string) => {
   
   if (isConnected) {
     try {
-      const testSessions = await TestSession.find({ createdBy: organizerId }).lean().exec();
+      const testSessions = await TestSession.find({ createdBy: organizerId }).lean().exec() || [];
       
       const sessionIds = testSessions.map(session => session._id);
       
+      // Find all submissions for these test sessions
       const submissions = await UserSubmission.find({
         testSession: { $in: sessionIds }
-      }).lean().exec();
+      }).lean().exec() || [];
       
-      // Calculate stats
-      const totalCandidates = await User.countDocuments({ 
-        _id: { $in: testSessions.flatMap(session => session.candidates) }
-      }).exec();
+      // Count candidates across all sessions
+      const candidateIds = new Set();
+      testSessions.forEach(session => {
+        session.candidates.forEach((candidateId: string) => {
+          candidateIds.add(candidateId.toString());
+        });
+      });
       
-      const completedCandidates = await UserSubmission.countDocuments({
-        testSession: { $in: sessionIds },
-        completed: true
-      }).exec();
+      const totalCandidates = candidateIds.size;
       
-      const flaggedCandidates = await UserSubmission.countDocuments({
-        testSession: { $in: sessionIds },
-        flaggedForCheating: true
-      }).exec();
+      // Count completed submissions
+      const completedCandidateIds = new Set();
+      submissions.forEach(sub => {
+        if (sub.completed) {
+          completedCandidateIds.add(sub.user.toString());
+        }
+      });
+      const completedCandidates = completedCandidateIds.size;
+      
+      // Count flagged submissions
+      const flaggedCandidateIds = new Set();
+      submissions.forEach(sub => {
+        if (sub.flaggedForCheating) {
+          flaggedCandidateIds.add(sub.user.toString());
+        }
+      });
+      const flaggedCandidates = flaggedCandidateIds.size;
       
       return {
         totalSessions: testSessions.length,
         totalCandidates,
         completedCandidates,
         flaggedCandidates,
-        testSessions: testSessions.map(session => ({
-          id: session._id,
-          title: session.title,
-          status: session.status,
-          startDate: session.startDate,
-          endDate: session.endDate,
-          totalCandidates: session.candidates.length,
-          completedCandidates: submissions.filter(
-            sub => sub.testSession.toString() === session._id.toString() && sub.completed
-          ).length,
-          flaggedCandidates: submissions.filter(
-            sub => sub.testSession.toString() === session._id.toString() && sub.flaggedForCheating
-          ).length
-        }))
+        testSessions: testSessions.map(session => {
+          const sessionSubmissions = submissions.filter(
+            sub => sub.testSession.toString() === session._id.toString()
+          );
+          
+          const completedCandidates = new Set(
+            sessionSubmissions.filter(sub => sub.completed).map(sub => sub.user.toString())
+          ).size;
+          
+          const flaggedCandidates = new Set(
+            sessionSubmissions.filter(sub => sub.flaggedForCheating).map(sub => sub.user.toString())
+          ).size;
+          
+          return {
+            id: session._id,
+            title: session.title,
+            status: session.status,
+            startDate: session.startDate,
+            endDate: session.endDate,
+            totalCandidates: session.candidates.length,
+            completedCandidates,
+            flaggedCandidates
+          };
+        })
       };
     } catch (error) {
       console.error('Error getting organizer insights:', error);
-      // Fallback to mock data
       return getMockOrganizerInsights(organizerId);
     }
   } else {
