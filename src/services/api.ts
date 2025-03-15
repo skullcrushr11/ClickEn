@@ -11,7 +11,7 @@ export const authenticateUser = async (email: string, password: string) => {
   
   // In a real application, you would hash the password before comparing
   // For simplicity, we're doing a direct comparison here
-  const user = await User.findOne({ email, password }).exec();
+  const user = await User.findOne({ email, password }).lean().exec();
   
   if (!user) {
     throw new Error('Invalid credentials');
@@ -30,7 +30,7 @@ export const registerUser = async (userData: Partial<IUser>) => {
   await connectToDatabase();
   
   // Check if user already exists
-  const existingUser = await User.findOne({ email: userData.email }).exec();
+  const existingUser = await User.findOne({ email: userData.email }).lean().exec();
   
   if (existingUser) {
     throw new Error('User already exists');
@@ -50,12 +50,12 @@ export const registerUser = async (userData: Partial<IUser>) => {
 // Question Services
 export const getQuestions = async () => {
   await connectToDatabase();
-  return await Question.find().exec();
+  return await Question.find().lean().exec();
 };
 
 export const getQuestionById = async (id: string) => {
   await connectToDatabase();
-  return await Question.findById(id).exec();
+  return await Question.findById(id).lean().exec();
 };
 
 export const createQuestion = async (questionData: Partial<IQuestion>) => {
@@ -70,16 +70,16 @@ export const getTestSessions = async (userId: string, userType: string) => {
   await connectToDatabase();
   
   if (userType === 'organizer') {
-    return await TestSession.find({ createdBy: userId }).exec();
+    return await TestSession.find({ createdBy: userId }).lean().exec();
   } else {
     // For students, find test sessions they are candidates for
-    return await TestSession.find({ candidates: userId, status: 'active' }).exec();
+    return await TestSession.find({ candidates: userId, status: 'active' }).lean().exec();
   }
 };
 
 export const getTestSessionById = async (id: string) => {
   await connectToDatabase();
-  return await TestSession.findById(id).populate('questions').exec();
+  return await TestSession.findById(id).populate('questions').lean().exec();
 };
 
 export const createTestSession = async (sessionData: Partial<ITestSession>) => {
@@ -95,7 +95,7 @@ export const getUserSubmissions = async (userId: string, testSessionId: string) 
   return await UserSubmission.find({ 
     user: userId,
     testSession: testSessionId 
-  }).populate('question').exec();
+  }).populate('question').lean().exec();
 };
 
 export const saveUserSubmission = async (submissionData: Partial<IUserSubmission>) => {
@@ -125,13 +125,13 @@ export const saveUserSubmission = async (submissionData: Partial<IUserSubmission
 export const getOrganizerInsights = async (organizerId: string) => {
   await connectToDatabase();
   
-  const testSessions = await TestSession.find({ createdBy: organizerId }).exec();
+  const testSessions = await TestSession.find({ createdBy: organizerId }).lean().exec();
   
   const sessionIds = testSessions.map(session => session._id);
   
   const submissions = await UserSubmission.find({
     testSession: { $in: sessionIds }
-  }).exec();
+  }).lean().exec();
   
   // Calculate stats
   const totalCandidates = await User.countDocuments({ 
