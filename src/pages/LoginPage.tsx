@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Link } from 'react-router-dom';
 import LoginForm from '@/components/auth/LoginForm';
 
 const LoginPage: React.FC = () => {
@@ -29,6 +31,14 @@ const LoginPage: React.FC = () => {
             <LoginForm userType="organizer" />
           </TabsContent>
         </Tabs>
+        
+        <div className="mt-6 text-center">
+          <Link to="/mongodb-config">
+            <Button variant="outline" size="sm">
+              Configure MongoDB
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );

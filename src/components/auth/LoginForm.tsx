@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -8,6 +8,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
+import { authenticateUser } from '@/services/api';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -23,6 +24,7 @@ interface LoginFormProps {
 const LoginForm: React.FC<LoginFormProps> = ({ userType }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -32,14 +34,29 @@ const LoginForm: React.FC<LoginFormProps> = ({ userType }) => {
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    // In a real app, this would connect to a backend service
-    console.log("Login data:", data);
-    
-    // Mock authentication
-    if (data.email && data.password) {
-      localStorage.setItem('userType', userType);
-      localStorage.setItem('userEmail', data.email);
+  const onSubmit = async (data: LoginFormValues) => {
+    try {
+      setIsLoading(true);
+      
+      // In a real app with proper backend, you would make an API call here
+      // For now, we're using the MongoDB service we created
+      const user = await authenticateUser(data.email, data.password);
+      
+      // Ensure the user type matches
+      if (user.userType !== userType) {
+        toast({
+          title: "Login failed",
+          description: `This account is not registered as a ${userType}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Save user data to localStorage for now
+      // In a production app, you would use a more secure method like HTTP-only cookies
+      localStorage.setItem('userId', user.id);
+      localStorage.setItem('userType', user.userType);
+      localStorage.setItem('userEmail', user.email);
       localStorage.setItem('isAuthenticated', 'true');
       
       toast({
@@ -52,6 +69,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ userType }) => {
       } else {
         navigate('/organizer-dashboard');
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "Login failed",
+        description: "Invalid credentials. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -89,8 +115,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ userType }) => {
             )}
           />
           
-          <Button type="submit" className="w-full">
-            Log in
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Logging in..." : "Log in"}
           </Button>
         </form>
       </Form>
@@ -100,6 +126,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ userType }) => {
           {userType === 'student' 
             ? "Taking an assessment? Log in with your credentials above."
             : "Assessment organizer? Log in to manage assessments and candidates."}
+        </p>
+      </div>
+      
+      <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-md">
+        <p className="text-sm text-orange-700">
+          <strong>MongoDB Connection Required:</strong> Please configure your MongoDB connection string in the environment to use this feature.
         </p>
       </div>
     </div>

@@ -10,6 +10,7 @@ import LoginPage from "./pages/LoginPage";
 import StudentDashboard from "./pages/StudentDashboard";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import TestSession from "./pages/TestSession";
+import MongoDBConfig from "./components/admin/MongoDBConfig";
 
 // Simple auth check
 const PrivateRoute = ({ children, userType }: { children: React.ReactNode, userType: string }) => {
@@ -34,6 +35,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/assessment-demo" element={<Index />} />
+          <Route path="/mongodb-config" element={<MongoDBConfig />} />
           
           <Route path="/student-dashboard" element={
             <PrivateRoute userType="student">
