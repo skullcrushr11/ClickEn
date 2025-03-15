@@ -2,7 +2,7 @@
 import mongoose from 'mongoose';
 
 // MongoDB connection string - to be filled in by the user
-const MONGODB_URI = process.env.MONGODB_URI || '';
+const MONGODB_URI = import.meta.env.VITE_MONGODB_URI || '';
 
 // Connection options
 const options = {
@@ -19,7 +19,7 @@ export const connectToDatabase = async () => {
   }
 
   if (!MONGODB_URI) {
-    console.error('MongoDB URI is not defined. Please set the MONGODB_URI environment variable.');
+    console.error('MongoDB URI is not defined. Please set the VITE_MONGODB_URI environment variable.');
     throw new Error('MongoDB URI is not defined');
   }
 
