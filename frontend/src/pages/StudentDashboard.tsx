@@ -37,13 +37,13 @@ const StudentDashboard: React.FC = () => {
     ]);
   }, []);
 
-  const handleStartTest = (testId: string) => {
+  const handleStartTest = () => {
     // In a real app, this would initialize a test session
     toast({
       title: "Test session started",
       description: "Your webcam and proctoring have been activated.",
     });
-    navigate(`/test/${testId}`);
+    navigate(`/assessment-demo}`);
   };
 
   const handleLogout = () => {
@@ -106,7 +106,7 @@ const StudentDashboard: React.FC = () => {
                       <div className="mt-4 sm:mt-0 flex flex-col sm:items-end gap-2">
                         <Button
                           className="flex items-center"
-                          onClick={() => handleStartTest(test.id)}
+                          onClick={() => handleStartTest()}
                         >
                           Start Test
                           <ArrowRight className="ml-2 h-4 w-4" />

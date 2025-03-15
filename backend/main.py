@@ -27,7 +27,7 @@ def get_users():
     ]
     for user in users:
         response = User.create(user)
-        print(response) 
+        print(response)  
 
     return jsonify({"message": "Users inserted successfully", "status": 201})
     

@@ -1,11 +1,11 @@
-
-import React, { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import QuestionSidebar from '@/components/QuestionSidebar';
 import QuestionDisplay from '@/components/QuestionDisplay';
 import CodeEditor from '@/components/CodeEditor';
 import { toast } from "@/hooks/use-toast";
+import { goFullScreen, handleCopy, handleCut, handlePaste } from '@/utils/coding-file';
 
-// Mock data for questions
+
 const mockQuestions = [
   {
     id: 1,
@@ -170,40 +170,132 @@ function twoSum(nums, target) {
   }
 };
 
+
 const Index = () => {
   const [currentQuestionId, setCurrentQuestionId] = useState(1);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [questions, setQuestions] = useState(mockQuestions);
-  
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const [internalClipboard, setInternalClipboard] = useState<string>("");
+
+
+  useEffect(() => {
+    const fullscreenPreferred = localStorage.getItem('fullscreenPreferred') === 'true';
+
+    const handleFullscreenChange = () => {
+      const isInFullscreen = Boolean(document.fullscreenElement);
+      setIsFullscreen(isInFullscreen);
+      if (!isInFullscreen) {
+        if (hasInteracted) {
+          localStorage.setItem('fullscreenPreferred', 'false');
+        }
+      }
+    };
+
+    // Attach event listeners
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    const attemptFullscreenOnLoad = () => {
+      if (fullscreenPreferred) {
+        setTimeout(() => {
+          goFullScreen(setIsFullscreen)
+        }, 1000);
+      }
+    };
+
+    // Handle first-time interaction
+    const handleUserInteraction = () => {
+      setHasInteracted(true);
+      goFullScreen(setIsFullscreen);
+      document.removeEventListener("click", handleUserInteraction);
+      localStorage.setItem('fullscreenPreferred', 'true');
+    };
+
+    // If user hasn't interacted yet, set up the click listener
+    if (!hasInteracted) {
+      document.addEventListener("click", handleUserInteraction);
+    } else {
+      // If they have interacted before (e.g., on a refresh), try to restore fullscreen
+      attemptFullscreenOnLoad();
+    }
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+      document.removeEventListener("click", handleUserInteraction);
+    };
+  }, [hasInteracted]);
+
+  // Check if we have interacted before (across page refreshes)
+  useEffect(() => {
+    const hasInteractedBefore = localStorage.getItem('hasInteracted') === 'true';
+    if (hasInteractedBefore) {
+      setHasInteracted(true);
+    }
+
+    return () => {
+      // Store interaction state when component unmounts
+      if (hasInteracted) {
+        localStorage.setItem('hasInteracted', 'true');
+      }
+    };
+  }, [hasInteracted]);
+
+  useEffect(() => {
+    // Add event listeners when component mounts
+    const copyHandler = (e: ClipboardEvent) => handleCopy(e, setInternalClipboard);
+    const cutHandler = (e: ClipboardEvent) => handleCut(e, setInternalClipboard);
+    const pasteHandler = (e: ClipboardEvent) => handlePaste(e, internalClipboard);
+
+    // Attach the event listeners to the document
+    document.addEventListener('copy', copyHandler as EventListener);
+    document.addEventListener('cut', cutHandler as EventListener);
+    document.addEventListener('paste', pasteHandler as EventListener);
+
+
+    // Clean up function to remove event listeners when component unmounts
+    return () => {
+      document.removeEventListener('copy', copyHandler as EventListener);
+      document.removeEventListener('cut', cutHandler as EventListener);
+      document.removeEventListener('paste', pasteHandler as EventListener);
+    };
+  }, [internalClipboard]);
+
   const currentQuestion = questions.find(q => q.id === currentQuestionId) || questions[0];
-  
+
   const handleSelectQuestion = (questionId: number) => {
     setCurrentQuestionId(questionId);
   };
-  
+
   const handlePrevQuestion = () => {
     const index = questions.findIndex(q => q.id === currentQuestionId);
     if (index > 0) {
       setCurrentQuestionId(questions[index - 1].id);
     }
   };
-  
+
   const handleNextQuestion = () => {
     const index = questions.findIndex(q => q.id === currentQuestionId);
     if (index < questions.length - 1) {
       setCurrentQuestionId(questions[index + 1].id);
     }
   };
-  
+
   const handleSubmitCode = (code: string, language: string) => {
     console.log(`Submitting ${language} code for question ${currentQuestionId}:`, code);
-    
+
     // Mark current question as completed
-    const updatedQuestions = questions.map(q => 
+    const updatedQuestions = questions.map(q =>
       q.id === currentQuestionId ? { ...q, completed: true } : q
     );
     setQuestions(updatedQuestions);
-    
+
     // Show success toast
     toast({
       title: "Solution submitted",
@@ -211,37 +303,55 @@ const Index = () => {
       duration: 3000
     });
   };
-  
+
   return (
-    <div className={`flex flex-row h-screen overflow-hidden transition-all duration-300 ease-in-out`}>
-      <QuestionSidebar
-        questions={questions}
-        currentQuestionId={currentQuestionId}
-        onSelectQuestion={handleSelectQuestion}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-      
-      <div className={`flex-1 flex ${sidebarCollapsed ? 'pl-[60px]' : 'pl-[280px]'} absolute inset-y-0 left-0 right-0 transition-all duration-300 ease-in-out`}>
-        <div className="w-1/2 border-r border-assessment-border overflow-y-auto">
-          <QuestionDisplay
-            question={currentQuestion}
-            onPrevQuestion={handlePrevQuestion}
-            onNextQuestion={handleNextQuestion}
-            hasPrevQuestion={questions.findIndex(q => q.id === currentQuestionId) > 0}
-            hasNextQuestion={questions.findIndex(q => q.id === currentQuestionId) < questions.length - 1}
-          />
-        </div>
-        
-        <div className="w-1/2 overflow-hidden">
-          <CodeEditor
-            questionId={currentQuestionId}
-            initialCode={getLanguageStarterCode('javascript')}
-            onSubmit={handleSubmitCode}
-          />
+    <>
+      <div className={`flex flex-row h-screen overflow-hidden transition-all duration-300 ease-in-out ${!isFullscreen ? 'blur-md' : ''}`}>
+        <QuestionSidebar
+          questions={questions}
+          currentQuestionId={currentQuestionId}
+          onSelectQuestion={handleSelectQuestion}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
+
+        <div className={`flex-1 flex ${sidebarCollapsed ? 'pl-[60px]' : 'pl-[280px]'} absolute inset-y-0 left-0 right-0 transition-all duration-300 ease-in-out`}>
+          <div className="w-1/2 border-r border-assessment-border overflow-y-auto">
+            <QuestionDisplay
+              question={currentQuestion}
+              onPrevQuestion={handlePrevQuestion}
+              onNextQuestion={handleNextQuestion}
+              hasPrevQuestion={questions.findIndex(q => q.id === currentQuestionId) > 0}
+              hasNextQuestion={questions.findIndex(q => q.id === currentQuestionId) < questions.length - 1}
+            />
+          </div>
+
+          <div className="w-1/2 overflow-hidden">
+            <CodeEditor
+              questionId={currentQuestionId}
+              initialCode={getLanguageStarterCode('javascript')}
+              onSubmit={handleSubmitCode}
+            />
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Fullscreen overlay */}
+      {!isFullscreen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-xl max-w-md text-center">
+            <h2 className="text-xl font-bold mb-4">Full Screen Required</h2>
+            <p className="mb-6">Please use full screen mode to continue with the assessment.</p>
+            <button
+              onClick={() => goFullScreen(setIsFullscreen)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Enter Full Screen
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
