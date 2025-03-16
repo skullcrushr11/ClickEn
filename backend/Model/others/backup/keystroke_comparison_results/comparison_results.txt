@@ -1,0 +1,8 @@
+Sincere accuracy: 0.50
+Cheating accuracy: 0.62
+Overall accuracy: 0.56
+Sincere similarity: 0.4799
+Cheating similarity: 0.3959
+Decision threshold: 0.4545
+Training time: 0.84 seconds
+Evaluation time: 0.14 seconds
