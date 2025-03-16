@@ -12,6 +12,7 @@ from pynput import keyboard
 # Global variables to store key events
 keyboard_events = []
 is_running = True
+risk_log_file = "risk_scores.log"  # File to log risk scores
 
 
 def on_press(key):
@@ -179,29 +180,18 @@ def calculate_risk_score(predictions, keystroke_data, scaling_factor=100):
     }
 
 
-def analyze_keystrokes():
-    global keyboard_events
-
-    if len(keyboard_events) < 10:
-        print("Not enough data to analyze yet")
-        return
-
-    # Create test session format that matches the expected structure
-    test_session = {"keyboard_data": keyboard_events.copy()}
-
-    # Process the current keystroke data
-    result = test_single_session(test_session, scaler, model)
-
-    # Display results
-    print("\n=== KEYSTROKE ANALYSIS RESULTS ===")
-    print(f"Risk Score: {result['risk_score']}/100")
-    print(f"Risk Level: {result['risk_level']}")
-    print(f"Confidence: {result['confidence']:.2f}")
-    print(f"Prediction: {result['prediction']}")
-    print("Risk Factors:")
-    for factor, value in result["risk_factors"].items():
-        print(f"  - {factor}: {value:.2f}")
-    print("=====================================\n")
+def log_risk_score(result):
+    """
+    Append risk score details to a log file
+    """
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    log_entry = f"{timestamp} | Score: {result['risk_score']} | Level: {result['risk_level']} | Prediction: {result['prediction']}\n"
+    
+    try:
+        with open(risk_log_file, "a") as f:
+            f.write(log_entry)
+    except Exception as e:
+        print(f"Error writing to log file: {e}")
 
 
 def test_single_session(session_data, scaler, model, threshold=0.5):
@@ -299,55 +289,6 @@ def test_single_session(session_data, scaler, model, threshold=0.5):
     }
 
 
-# Global variables to store key events
-keyboard_events = []
-is_running = True
-risk_log_file = "risk_scores.log"  # File to log risk scores
-
-
-def on_press(key):
-    try:
-        # Record key down event with timestamp
-        keyboard_events.append(["KD", key.char, time.time()])
-        print(f"Key {key.char} pressed")
-    except AttributeError:
-        # Special keys don't have a char attribute
-        pass
-
-
-def on_release(key):
-    try:
-        # Record key up event with timestamp
-        keyboard_events.append(["KU", key.char, time.time()])
-
-        # Analyze data periodically
-        if len(keyboard_events) % 10 == 0:  # Analyze after every 10 events
-            analyze_keystrokes()
-
-        # Stop listener if ESC is pressed
-        if key == keyboard.Key.esc:
-            global is_running
-            is_running = False
-            return False
-    except AttributeError:
-        # Special keys don't have a char attribute
-        pass
-
-
-def log_risk_score(result):
-    """
-    Append risk score details to a log file
-    """
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    log_entry = f"{timestamp} | Score: {result['risk_score']} | Level: {result['risk_level']} | Prediction: {result['prediction']}\n"
-    
-    try:
-        with open(risk_log_file, "a") as f:
-            f.write(log_entry)
-    except Exception as e:
-        print(f"Error writing to log file: {e}")
-
-
 def analyze_keystrokes():
     global keyboard_events
 
@@ -407,53 +348,30 @@ if __name__ == "__main__":
     print("Type something to analyze your keystroke patterns")
     print("Press ESC to exit")
 
+    # Use an alternative approach to keyboard monitoring
     try:
-        # Set up the keyboard listener with a newer approach
-        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-            while is_running:
-                time.sleep(0.1)
-                if not listener.running:
-                    break
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        print(f"Error in keyboard listener: {e}")
-    finally:
-        print("\nKeyboard monitoring stopped")
-        print(f"Risk score log saved to '{risk_log_file}'") 
+        listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+        listener.start()  # Start in a non-blocking way
         
-
-if __name__ == "__main__":
-    print("Loading model and preparing for keystroke analysis...")
-
-    # Load the saved model
-    try:
-        model = tf.keras.models.load_model("keystroke_cheating_detector.h5")
-        print("Model loaded successfully")
-    except Exception as e:
-        print(f"Error loading model: {e}")
-        sys.exit(1)
-
-    # Recreate the scaler from training data
-    scaler = recreate_scaler_from_training_data()
-    if scaler is None:
-        print("Failed to create scaler. Exiting.")
-        sys.exit(1)
-
-    print("\nStarting keyboard monitoring...")
-    print("Type something to analyze your keystroke patterns")
-    print("Press ESC to exit")
-
-    # Set up the keyboard listener
-    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
-    listener.start()
-
-    # Keep running until ESC is pressed
-    try:
+        # Main loop
         while is_running:
             time.sleep(0.1)
+            if not listener.is_alive():
+                print("Keyboard listener stopped unexpectedly, restarting...")
+                try:
+                    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+                    listener.start()
+                except Exception as e:
+                    print(f"Failed to restart keyboard listener: {e}")
+                    is_running = False
+        
+        # Clean up
+        if listener.is_alive():
+            listener.stop()
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print(f"Error in keyboard monitoring: {e}")
     finally:
-        listener.stop()
         print("\nKeyboard monitoring stopped")
+        print(f"Risk score log saved to '{risk_log_file}'")
