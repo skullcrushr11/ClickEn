@@ -5,7 +5,7 @@ import CodeEditor from '@/components/CodeEditor';
 import { toast } from "@/hooks/use-toast";
 import { goFullScreen, handleCopy, handleCut, handlePaste } from '@/utils/coding-file';
 import { KeyboardEventStreamer } from '@/utils/event-emitter';
-
+import crypto from "crypto";
 
 const mockQuestions = [
   {
@@ -318,14 +318,14 @@ const Index = () => {
     const timeSinceLastActivity = now - lastActivityTimeRef.current;
     
     // If mouse hasn't moved for more than 1 second and the question is not blurred
-    if (timeSinceLastActivity > 1000 && !isQuestionBlurred && isKeyPressed && isQuestionHovered) {
+    if (timeSinceLastActivity > 500 && !isQuestionBlurred && isKeyPressed && isQuestionHovered) {
       // Set a timeout before starting countdown if not already waiting
       if (inactivityTimeoutRef.current === null && countdownValue === null) {
         inactivityTimeoutRef.current = setTimeout(() => {
           // Start countdown after 1-second delay
           startCountdown();
           inactivityTimeoutRef.current = null;
-        }, 1000);
+        }, 500);
       }
     }
   }, [countdownValue, isQuestionBlurred, isKeyPressed, isQuestionHovered]);
@@ -600,21 +600,32 @@ const Index = () => {
     }
   };
 
-  const handleSubmitCode = (code: string, language: string) => {
+  const handleSubmitCode = async (code: string, language: string) => {
     console.log(`Submitting ${language} code for question ${currentQuestionId}:`, code);
 
-    // Mark current question as completed
-    const updatedQuestions = questions.map(q =>
-      q.id === currentQuestionId ? { ...q, completed: true } : q
-    );
-    setQuestions(updatedQuestions);
-
-    // Show success toast
-    toast({
-      title: "Solution submitted",
-      description: "Your solution has been submitted successfully",
-      duration: 3000
-    });
+    const scan_id = window.crypto.randomUUID();  
+    const apiUrl = `https://cors-anywhere.herokuapp.com/https://api.copyleaks.com/v2/writer-detector/${scan_id}/check`;
+    const accessToken = "20addb71-2bf1-4dd6-b2eb-c00adb1bf291"
+    const textAI = "Artificial Intelligence (AI) is transforming the education system by personalizing learning experiences, automating administrative tasks, and enhancing engagement. Traditional classrooms follow a standardized teaching approach, but AI-driven platforms adapt to individual student needs. Intelligent tutoring systems analyze student performance, identifying weaknesses and adjusting lesson plans accordingly. This enables students to learn at their own pace, improving comprehension and retention.\n\nAI also plays a crucial role in reducing the workload of educators. Automated grading systems assess assignments, quizzes, and even essays, allowing teachers to focus on interactive learning. AI-powered chatbots assist students by answering questions and providing instant feedback. These tools streamline administrative processes, making education more efficient.\n\nFurthermore, AI enhances accessibility for students with disabilities. Speech-to-text technology helps students with hearing impairments, while text-to-speech benefits those with visual impairments. AI-based translation tools break language barriers, making learning more inclusive.\n\nHowever, integrating AI into education comes with challenges. Over-reliance on technology may reduce human interaction, which is essential for developing critical thinking and communication skills. Data privacy concerns also arise, as AI systems collect and analyze vast amounts of student data. Ensuring ethical AI use and proper security measures is crucial to maintaining trust in educational technology.\n\nDespite these challenges, AI continues to reshape education by fostering personalized learning, improving efficiency, and increasing accessibility. When used thoughtfully, AI has the potential to complement traditional teaching methods, creating a more effective and inclusive educational environment. The future of education lies in a balance between human expertise and technological innovation.\n\nTarun is Hot"
+    try {
+      fetch("http://localhost:5000/proxy/copyleaks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          scanId: "12345",
+          text: textAI
+        })
+      });
+    } catch (error) {
+      console.error("Network error:", error);
+      toast({
+        title: "Network Error",
+        description: "Unable to submit your solution. Please try again.",
+        duration: 3000
+      });
+    }
   };
   const MCQOptions = ({ question, onSubmit }) => {
     const [selectedOption, setSelectedOption] = useState(null);

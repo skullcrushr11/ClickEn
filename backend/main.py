@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from db import DB, User
 from flask_cors import CORS
-import json
+import threading, time
 from flask_socketio import SocketIO
 import numpy as np
 import pandas as pd
@@ -9,10 +9,231 @@ import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
 import os
 import time
+from datetime import datetime
+from dotenv import load_dotenv
+import os
+
+global risk_score 
+risk_score=0
+
 
 app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
+event_buffer = []
+buffer_lock = threading.Lock()
+last_process_time = time.time()
+
+
+  # Replace with your actual API key
+COPYLEAKS_API_URL = "https://api.copyleaks.com/v2/writer-detector"
+
+@app.route("/proxy/copyleaks", methods=["POST"])
+def proxy_copyleaks():
+    load_dotenv()
+    VITE_MONGODB_URI = os.getenv("VITE_MONGODB_URI")
+    ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+
+
+    try:
+        import requests
+        import uuid  # For generating a unique scan ID
+
+        # Replace with your actual Copyleaks access token
+          
+
+        # Copyleaks API endpoint
+        API_URL = "https://api.copyleaks.com/v2/writer-detector"
+
+        # Generate a unique scan ID for this request
+        scan_id = str(uuid.uuid4())
+
+        # Text prompt to analyze (Modify this as needed)
+        text_prompt = """Artificial Intelligence (AI) has rapidly evolved in recent years, transforming multiple industries. 
+        From healthcare to finance, AI's ability to analyze data and automate tasks has made it an essential tool in modern society. 
+        For instance, in medicine, AI assists doctors in diagnosing diseases and predicting patient outcomes. AI-powered chatbots 
+        enhance customer service by providing instant responses. Meanwhile, self-driving cars utilize AI to navigate roads safely. 
+
+        Despite these benefits, AI raises concerns, particularly regarding ethics and job displacement. Many fear that as AI 
+        systems become more advanced, human jobs will be at risk. Additionally, AI models sometimes exhibit biases, leading 
+        to unfair treatment in decision-making processes such as hiring and lending. Ensuring that AI is transparent and 
+        fair is crucial for responsible implementation.
+
+        Furthermore, AI-generated content is now a major concern. As AI models like ChatGPT become more sophisticated, 
+        it is increasingly difficult to differentiate between human-written and AI-generated text. Tools like Copyleaks 
+        AI detection help verify authenticity, ensuring that content remains credible. Academic institutions, publishers, 
+        and businesses now rely on such AI detection tools to prevent misinformation and maintain trust.
+
+        In conclusion, AI presents both opportunities and challenges. While it enhances productivity and efficiency, 
+        it also requires careful regulation and ethical considerations. Moving forward, it is vital to balance AI innovation 
+        with responsible oversight to ensure its positive impact on society."""
+
+        # API request headers
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {ACCESS_TOKEN}"  # Use your token here
+        }
+
+        # API request payload
+        payload = {
+            "text": text_prompt,
+            "sandbox": False,  # Set to True if using a testing environment
+            "explain": True,  # Enables detailed analysis
+            "sensitivity": 2  # Adjust detection sensitivity (0-5, default is 2)
+        }
+
+        # Send request to Copyleaks API
+        response = requests.post(f"{API_URL}/{scan_id}/check", headers=headers, json=payload)
+
+        # Print the API response
+        if response.status_code == 200:
+            result = response.json()
+            print("\n✅ AI Detection Response:")
+            print(result)
+            
+            # Extracting key details
+            print("\n🔹 Model Version:", result.get("modelVersion"))
+            print("🔹 AI Probability:", result.get("summary", {}).get("ai", "N/A"))
+            print("🔹 Human Probability:", result.get("summary", {}).get("human", "N/A"))
+            
+            # Print detailed classification results
+            for i, res in enumerate(result.get("results", [])):
+                # print(f"\n🔍 Classification {i+1}:")
+                # print("  - AI Classification:", res.get("classification"))
+                print("  - Probability:", res.get("probability"))
+            return 
+
+        else:
+            print("\n❌ Error:", response.status_code, response.text)
+
+
+    except Exception as e:
+        return jsonify({"error": "Error connecting to Copyleaks API", "details": str(e)}), 500
+
+def process_events_batch():
+    """
+    Process all events collected in the last 10 seconds as a time series
+    """
+    global event_buffer
+    global risk_score  # Add this line to properly reference the global variable
+    
+    with buffer_lock:
+        # Make a copy of the buffer and clear it
+        events_to_process = event_buffer.copy()
+        event_buffer = []  # Clear the buffer
+    
+    # Only process if there are events
+        
+    if events_to_process:
+        disallowed_hotkeys = [
+            {'Control', 'shift', 'n'},  # New incognito window
+            {'Control', 't'},  # New tab
+            {'Control', 'tab'},  # Switch tab
+            {'alt', 'tab'},  # Switch application (Windows)
+            {'cmd', 'tab'},  # Switch application (Mac)
+            {'Control', 'shift'},  # Task Manager (Windows)
+            {'cmd', 'option', 'esc'},  # Force quit (Mac)
+            {'Control', 'w'},  # Close tab
+            {'alt', 'f4'},  # Close window (Windows)
+            {'cmd', 'q'},  # Quit application (Mac)
+            {'Control', 'p'},  # Print (potential for copying)
+            {'Control', 's'},  # Save page
+            {'Control', 'u'},  # View page source
+            {'Control', 'f'},  # Find on page
+            {'Control', 'h'},  # Open history
+                ]
+        
+        print(f"\n>>> Processing batch of {len(events_to_process)} events collected in the last 10 seconds")
+        
+        def detect_violations(events):
+            pressed_keys = set()
+            violations = 0
+
+            for event in events:
+                key = event['key'].lower()
+                
+                if event['type'] == 'KD':
+                    pressed_keys.add(key)
+                
+                if event['type'] == 'KU' and key in pressed_keys:
+                    pressed_keys.remove(key)
+
+                # Check if a forbidden hotkey combination was pressed
+                for hotkey in disallowed_hotkeys:
+                    if hotkey.issubset(pressed_keys):
+                        violations += 1
+                        print(f">>> Violation detected: {' + '.join(hotkey)}")
+                        pressed_keys.clear()  # Reset to prevent counting the same shortcut multiple times
+
+            return violations
+
+        # Detect violations in the processed events
+        violations_count = detect_violations(events_to_process)
+
+        # Maintain risk score (properly using the global variable now)
+        risk_score += 5*violations_count
+
+        print(f">>> Total violations detected: {violations_count}")
+        print(f">>> Updated risk score: {risk_score}")
+        
+        # Sort events by timestamp
+        events_to_process.sort(key=lambda x: x['timestamp'])
+        
+        # Format as time series data
+        time_series_data = []
+        for event in events_to_process:
+            event_type = event['type']
+            
+            # Convert timestamp from milliseconds to seconds if needed
+            timestamp_in_seconds = event['timestamp'] / 1000.0 if event['timestamp'] > 946684800000 else event['timestamp']
+            
+            try:
+                formatted_time = datetime.fromtimestamp(timestamp_in_seconds).strftime('%H:%M:%S.%f')[:-3]
+                time_series_data.append({
+                    'time': formatted_time,
+                    'raw_time': timestamp_in_seconds,
+                    'event': f"{event_type} | {event['key']}"
+                })
+            except Exception as e:
+                print(f"Error formatting timestamp for event {event}: {str(e)}")
+        
+        # Print time series data only if we have any valid entries
+        if time_series_data:
+            print(">>> Key Event Time Series:")
+            print(">>> Time | Event")
+            print(">>> ---------------")
+            for entry in time_series_data:
+                print(f">>> {entry['time']} | {entry['event']}")
+            
+            # Calculate intervals between key presses if there are enough events
+            if len(time_series_data) > 1:
+                print("\n>>> Time intervals between consecutive events:")
+                for i in range(1, len(time_series_data)):
+                    interval = time_series_data[i]['raw_time'] - time_series_data[i-1]['raw_time']
+                    print(f">>> {time_series_data[i-1]['event']} → {time_series_data[i]['event']}: {interval:.3f}s")
+        
+        print(f">>> Processing complete\n")
+    else:
+        print("\n>>> No events to process in the last 10 seconds\n")
+
+# Background task to process events every 10 seconds
+def background_processor():
+    global last_process_time
+    
+    print("Background processor started - will process events every 10 seconds")
+    
+    while True:
+        current_time = time.time()
+        time_elapsed = current_time - last_process_time
+        
+        # If 10 seconds have passed, process the events
+        if time_elapsed >= 10:
+            process_events_batch()
+            last_process_time = current_time
+        
+        # Sleep for a short time to avoid high CPU usage
+        time.sleep(0.5)
 
 # Model and scaler for keystroke biometrics
 model = None
@@ -370,42 +591,24 @@ def handle_disconnect():
 
 @socketio.on('keyevents')
 def handle_keyevents(events):
+    global event_buffer
     try:
-        client_id = request.sid
-        print(f"Received {len(events)} key events from client {client_id}")
-        
-        # Format events for the model
-        keyboard_data = []
+        # Keep the original logging functionality
         for event in events:
-            event_type = "KD" if event['type'] == 'keydown' else "KU"
-            keyboard_data.append([event_type, event['key'], event['timestamp']])
-        
-        # Add to the client's accumulated data
-        if client_id not in client_keystroke_data:
-            client_keystroke_data[client_id] = []
-        
-        client_keystroke_data[client_id].extend(keyboard_data)
-        
-        # Create session data format with all accumulated data
-        session_data = {"keyboard_data": client_keystroke_data[client_id]}
-        
-        # Always analyze the full keystroke history for this client
-        analysis = analyze_keystroke_session(session_data)
-        
-        # Add metadata to the response
-        result = {
-            "status": "ok", 
-            "count": len(events),
-            "total_events": len(client_keystroke_data[client_id]),
-            "analysis": analysis,
-            "timestamp": time.time()
-        }
-        
-        # If we have limited memory, we could optionally cap the history size
-        # if len(client_keystroke_data[client_id]) > 1000:
-        #     client_keystroke_data[client_id] = client_keystroke_data[client_id][-1000:]
-        
-        return result
+            print(event)
+            # Ensure timestamp exists
+            if 'timestamp' not in event:
+                event['timestamp'] = time.time()
+                
+            # Log the event in the format KD/KU | key
+            event_type = event['type']
+            print(f"Key event: {event_type} | {event['key']} at {event['timestamp']}")
+            
+            # Add to the buffer for batch processing
+            with buffer_lock:
+                event_buffer.append(event)
+                
+        return {'status': 'ok', 'count': len(events)}
     except Exception as e:
         print(f"Error: {str(e)}")
         return {'status': 'error', 'message': str(e)}
@@ -419,4 +622,8 @@ def handle_reset_session():
     return {'status': 'ok', 'message': 'Session reset successfully'}
 
 if __name__ == "__main__":
+    # Start the background processor thread before running the app
+    processor_thread = threading.Thread(target=background_processor, daemon=True)
+    processor_thread.start()
+    
     socketio.run(app, debug=True)

@@ -4,3 +4,7 @@ venv/
 .venv/
 
 *.env
+<<<<<<< Updated upstream
+=======
+__pycache__/
+>>>>>>> Stashed changes
